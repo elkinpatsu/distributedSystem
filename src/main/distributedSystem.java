@@ -37,6 +37,8 @@ public class distributedSystem extends JFrame {
     private JTable detailedTable;
     private static final ScheduledExecutorService scheduler = Executors.newScheduledThreadPool(1);
     private static DefaultTableModel detailedModel;
+    private static OperatingSystemMXBean osBean = (OperatingSystemMXBean) ManagementFactory.getOperatingSystemMXBean();
+
 
     public static void main(String[] args) throws InterruptedException {
         ScheduledExecutorService scheduler = Executors.newScheduledThreadPool(1);
@@ -119,13 +121,16 @@ public class distributedSystem extends JFrame {
             };
         
         metricasEstaticas[0] = System.getProperty("user.name");
-        metricasEstaticas[1] = System.getenv("PROCESSOR_IDENTIFIER");
-        metricasEstaticas[2] = System.getenv("PROCESSOR_MHZ");
+        metricasEstaticas[1] = getSystemInfo("wmic cpu get name");
+        metricasEstaticas[2] = getSystemInfo("wmic cpu get MaxClockSpeed")+"MHz";
         metricasEstaticas[3] = Runtime.getRuntime().availableProcessors()+"";
         File disk = new File("C:");
         long totalSpace = disk.getTotalSpace();
         metricasEstaticas[4] = formatSize(totalSpace);
         metricasEstaticas[5] = System.getProperty("os.version");
+        
+        
+
         detailedModel = new DefaultTableModel(detailedColumnNames, 0);
         
         detailedModel.addRow(row1);
