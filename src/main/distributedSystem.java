@@ -37,6 +37,8 @@ public class distributedSystem extends JFrame {
     private JTable detailedTable;
     private static final ScheduledExecutorService scheduler = Executors.newScheduledThreadPool(1);
     private static DefaultTableModel detailedModel;
+    private static double bandwidth = 0;
+
 
     public static void main(String[] args) throws InterruptedException {
         ScheduledExecutorService scheduler = Executors.newScheduledThreadPool(1);
@@ -177,6 +179,24 @@ public class distributedSystem extends JFrame {
             stopSendingMetrics();
         }
     }
+    
+    private void listenBandWidth() {
+        try (ServerSocket serverSocket = new ServerSocket(9999)) {
+            System.out.println("Server is listening on port 9999");
+            while (true) {
+                try (Socket socket = serverSocket.accept();
+                     BufferedReader reader = new BufferedReader(new InputStreamReader(socket.getInputStream()));
+                     OutputStreamWriter writer = new OutputStreamWriter(socket.getOutputStream())) {
+                    
+                    String message = reader.readLine();
+                    writer.write(message + "\n");
+                    writer.flush();
+                }
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+    }
 
     private void notifyServerSwitching() throws IOException {
         if (out != null) {
@@ -289,11 +309,42 @@ public class distributedSystem extends JFrame {
         metricSenderExecutor = Executors.newSingleThreadScheduledExecutor();
         metricSenderExecutor.scheduleAtFixedRate(() -> {
             if (out != null) {
-                out.println(updateSystemMetrics());
+               out.println(updateSystemMetrics());
+               long startTime = System.currentTimeMillis();
             }
         }, 0, 1, TimeUnit.SECONDS);
     }
 
+    public static double measureBandwidth(String message) throws Exception {
+    	String serverAddress = clientIP;
+    	int serverPort = 9999;
+        try (Socket socket = new Socket(serverAddress, serverPort);
+             OutputStreamWriter writer = new OutputStreamWriter(socket.getOutputStream());
+             BufferedReader reader = new BufferedReader(new InputStreamReader(socket.getInputStream()))) {
+
+            long startTime = System.currentTimeMillis();
+
+            // Enviar mensaje
+            writer.write(message + "\n");
+            writer.flush();
+
+            // Leer respuesta
+            String response = reader.readLine();
+
+            long endTime = System.currentTimeMillis();
+            long duration = endTime - startTime; // Duración en milisegundos
+
+            int requestSizeInBytes = message.getBytes().length;
+            int responseSizeInBytes = response.getBytes().length;
+            int totalSizeInBytes = requestSizeInBytes + responseSizeInBytes;
+
+            double totalSizeInMegabytes = totalSizeInBytes / (1024.0 * 1024.0);
+            double durationInSeconds = duration / 1000.0;
+
+            return totalSizeInMegabytes / durationInSeconds; // Ancho de banda en MB/s
+        }
+    }
+    
     private void stopSendingMetrics() {
         if (metricSenderExecutor != null) {
             metricSenderExecutor.shutdown();
@@ -327,9 +378,7 @@ public class distributedSystem extends JFrame {
         scheduler.scheduleAtFixedRate(new Runnable() {
             @Override
             public void run() {
-                String metrics = updateSystemMetrics();
-                System.out.println(metrics);
-                
+                String metrics = updateSystemMetrics();                
                 processClientData(metrics.split("-")[0].split(","),metrics.split("-")[1].split(","));
             }
         }, 0, 1, TimeUnit.SECONDS); // Actualiza cada 10 segundos
@@ -347,40 +396,12 @@ public class distributedSystem extends JFrame {
         long totalDiskSpace = disk.getTotalSpace();
         double diskFreePercentage = (double) freeDiskSpace / totalDiskSpace * 100;
         double rankScore = (cpuFree + memoryFreePercentage + diskFreePercentage + Runtime.getRuntime().availableProcessors() * 100) / 100;
-
-        String serverAddress = clientIP; // Dirección IP del servidor en la red local
-        int serverPort = 9999;
-        String message = "This is a test message to measure bandwidth on a local network";
-        double bandwidth = 0;
-        try (Socket socket = new Socket(serverAddress, serverPort);
-             OutputStreamWriter writer = new OutputStreamWriter(socket.getOutputStream());
-             BufferedReader reader = new BufferedReader(new InputStreamReader(socket.getInputStream()))) {
-
-            long startTime = System.currentTimeMillis();
-
-            // Enviar mensaje
-            writer.write(message + "\n");
-            writer.flush();
-
-            // Leer respuesta
-            String response = reader.readLine();
-
-            long endTime = System.currentTimeMillis();
-            long duration = endTime - startTime; // Duración en milisegundos
-
-            int requestSizeInBytes = message.getBytes().length;
-            int responseSizeInBytes = response.getBytes().length;
-            int totalSizeInBytes = requestSizeInBytes + responseSizeInBytes;
-
-            double totalSizeInMegabytes = totalSizeInBytes / (1024.0 * 1024.0);
-            double durationInSeconds = duration / 1000.0;
-
-            bandwidth = totalSizeInMegabytes / durationInSeconds; // Ancho de banda en MB/s
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
-
-        
+        try {
+			bandwidth = measureBandwidth("obtener ancho de banda");
+		} catch (Exception e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
         return getHamachiIP() + "," + cpuFree + "," + memoryFreePercentage + "," + diskFreePercentage + "," + rankScore + ","+ bandwidth+"MB/s" +",false"+"-"+metricasEstaticas[0]+","+metricasEstaticas[1]+","+metricasEstaticas[2]+","+metricasEstaticas[3]+","+metricasEstaticas[4]+","+metricasEstaticas[5]+",";
     }
 
