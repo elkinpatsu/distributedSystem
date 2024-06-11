@@ -119,11 +119,13 @@ public class distributedSystem extends JFrame {
             };
         
         metricasEstaticas[0] = System.getProperty("user.name");
-        metricasEstaticas[1] = getSystemInfo("wmic cpu get name");
-        metricasEstaticas[2] = getSystemInfo("wmic cpu get MaxClockSpeed");
+        metricasEstaticas[1] = System.getenv("PROCESSOR_IDENTIFIER");
+        metricasEstaticas[2] = System.getenv("PROCESSOR_MHZ");
         metricasEstaticas[3] = Runtime.getRuntime().availableProcessors()+"";
-        metricasEstaticas[4] = new File("/").getTotalSpace() / (1024 * 1024 * 1024) + " GB";
-        metricasEstaticas[5] = getSystemInfo("wmic os get Version");
+        File disk = new File("C:");
+        long totalSpace = disk.getTotalSpace();
+        metricasEstaticas[4] = formatSize(totalSpace);
+        metricasEstaticas[5] = System.getProperty("os.version");
         detailedModel = new DefaultTableModel(detailedColumnNames, 0);
         
         detailedModel.addRow(row1);
@@ -139,6 +141,12 @@ public class distributedSystem extends JFrame {
         panel.add(new JScrollPane(table));
         panel.add(new JScrollPane(detailedTable));
     }
+    
+    private static String formatSize(long size) {
+        long gb = 1024L * 1024L * 1024L;
+        return size / gb + " GB";
+    }
+
     
     private String getSystemInfo(String command) {
         try {
@@ -336,7 +344,7 @@ public class distributedSystem extends JFrame {
         }, 0, 1, TimeUnit.SECONDS); // Actualiza cada 10 segundos
     }
 
-    private static String updateSystemMetrics() {
+    private static String updateSystemMetrics() {	 		
         OperatingSystemMXBean osBean = (OperatingSystemMXBean) ManagementFactory.getOperatingSystemMXBean();
         double cpuLoad = osBean.getSystemCpuLoad() * 100;
         double cpuFree = 100 - cpuLoad;
