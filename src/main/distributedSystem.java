@@ -366,6 +366,12 @@ public class distributedSystem extends JFrame {
                     tableModel.setValueAt(metrics[2], i, 2);
                     tableModel.setValueAt(metrics[3], i, 3);
                     tableModel.setValueAt(metrics[4], i, 4);
+            		detailedModel.setValueAt(staticMetrics[0], i, 0);
+                    detailedModel.setValueAt(staticMetrics[1], i, 1);
+                    detailedModel.setValueAt(staticMetrics[2], i, 2);
+                    detailedModel.setValueAt(staticMetrics[3], i, 3);
+                    detailedModel.setValueAt(staticMetrics[4], i, 4);
+                    detailedModel.setValueAt(staticMetrics[5], i, 5);
                     updated = true;
                     break;
                 }
@@ -376,12 +382,6 @@ public class distributedSystem extends JFrame {
             updated = false;
             for (int i = 0; i < detailedModel.getRowCount(); i++) {
             	if (detailedModel.getValueAt(i, 0).equals(staticMetrics[0])) {
-            		detailedModel.setValueAt(staticMetrics[0], i, 0);
-                    detailedModel.setValueAt(staticMetrics[1], i, 1);
-                    detailedModel.setValueAt(staticMetrics[2], i, 2);
-                    detailedModel.setValueAt(staticMetrics[3], i, 3);
-                    detailedModel.setValueAt(staticMetrics[4], i, 4);
-                    detailedModel.setValueAt(staticMetrics[5], i, 5);
                     updated = true;
                     break;
                 }
@@ -396,18 +396,50 @@ public class distributedSystem extends JFrame {
 
     private static void sortTableByRankScore() {
         List<String[]> tableData = new ArrayList<>();
+        List<String[]> tableStaticData = new ArrayList<>();
         for (int i = 0; i < tableModel.getRowCount(); i++) {
             String[] row = new String[tableModel.getColumnCount()];
+            String[] row2 = new String[detailedModel.getColumnCount()];
             for (int j = 0; j < tableModel.getColumnCount(); j++) {
                 row[j] = tableModel.getValueAt(i, j).toString();
+                row2[j] = detailedModel.getValueAt(i, j).toString();                
             }
             tableData.add(row);
+            tableStaticData.add(row2);
         }
-        tableData.sort((a, b) -> Double.compare(Double.parseDouble(b[4]), Double.parseDouble(a[4])));
+        
+        List<Integer> indices = new ArrayList<>();
+        for (int i = 0; i < tableData.size(); i++) {
+            indices.add(i);
+        }
+
+        // Ordenar los índices basándose en tableData
+        Collections.sort(indices, new Comparator<Integer>() {
+            @Override
+            public int compare(Integer index1, Integer index2) {
+                return Double.compare(Double.parseDouble(tableData.get(index2)[4]), Double.parseDouble(tableData.get(index1)[4]));
+            }
+        });
+
+        // Aplicar la ordenación a ambos arreglos usando los índices ordenados
+        List<String[]> sortedTableData = new ArrayList<>();
+        List<String[]> sortedTableStaticData = new ArrayList<>();
+
+        for (int index : indices) {
+            sortedTableData.add(tableData.get(index));
+            sortedTableStaticData.add(tableStaticData.get(index));
+        }
+
         tableModel.setRowCount(0); // Clear the table
+        detailedModel.setRowCount(0); // Clear the table
         for (String[] row : tableData) {
             tableModel.addRow(row);
         }
+        
+        for (String[] row : tableStaticData) {
+            detailedModel.addRow(row);
+        }
+        
     }
 
     private void resetTable() {
