@@ -15,6 +15,7 @@ import java.awt.event.*;
 import java.lang.management.ManagementFactory;
 import com.sun.management.OperatingSystemMXBean;
 
+
 public class distributedSystem extends JFrame {
     private JButton switchButton;
     private static Socket socket;
@@ -87,6 +88,11 @@ public class distributedSystem extends JFrame {
         }
     }
 
+    private static String formatSize(long size) {
+        long gb = 1024L * 1024L * 1024L;
+        return size / gb + " GB";
+    }
+
     private void setupUI() {
         JPanel panel = new JPanel();
         add(panel);
@@ -112,17 +118,21 @@ public class distributedSystem extends JFrame {
             "OSVersion"
 	        };
 
+        File disk = new File("/");
+        long totalSpace = disk.getTotalSpace();
+
         Object[] row1 = {
-        		System.getProperty("user.name"), getSystemInfo("wmic cpu get name"), getSystemInfo("wmic cpu get MaxClockSpeed"),
-        		Runtime.getRuntime().availableProcessors(), new File("/").getTotalSpace() / (1024 * 1024 * 1024) + " GB",
-        		getSystemInfo("wmic os get Version")
+        		System.getProperty("user.name"), getSystemInfo("wmic cpu get name"), System.getenv("PROCESSOR_MHZ"),
+        		Runtime.getRuntime().availableProcessors()+"", formatSize(totalSpace) + " GB",
+        		System.getProperty("os.version")
             };
+
         metricasEstaticas[0] = System.getProperty("user.name");
         metricasEstaticas[1] = getSystemInfo("wmic cpu get name");
-        metricasEstaticas[2] = getSystemInfo("wmic cpu get MaxClockSpeed");
+        metricasEstaticas[2] = System.getenv("PROCESSOR_MHZ");
         metricasEstaticas[3] = Runtime.getRuntime().availableProcessors()+"";
-        metricasEstaticas[4] = new File("/").getTotalSpace() / (1024 * 1024 * 1024) + " GB";
-        metricasEstaticas[5] = getSystemInfo("wmic os get Version");
+        metricasEstaticas[4] = formatSize(totalSpace) + " GB";
+        metricasEstaticas[5] = System.getProperty("os.version");
         detailedModel = new DefaultTableModel(detailedColumnNames, 0);
         
         detailedModel.addRow(row1);
