@@ -432,11 +432,11 @@ public class distributedSystem extends JFrame {
 
         tableModel.setRowCount(0); // Clear the table
         detailedModel.setRowCount(0); // Clear the table
-        for (String[] row : tableData) {
+        for (String[] row : sortedTableData) {
             tableModel.addRow(row);
         }
         
-        for (String[] row : tableStaticData) {
+        for (String[] row : sortedTableStaticData) {
             detailedModel.addRow(row);
         }
         
