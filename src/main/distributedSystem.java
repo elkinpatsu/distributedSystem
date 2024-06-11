@@ -381,7 +381,7 @@ public class distributedSystem extends JFrame {
         }
 
         
-        return getHamachiIP() + "," + cpuFree + "," + memoryFreePercentage + "," + diskFreePercentage + "," + rankScore + ","+ bandwidth +",false"+"-"+metricasEstaticas[0]+","+metricasEstaticas[1]+","+metricasEstaticas[2]+","+metricasEstaticas[3]+","+metricasEstaticas[4]+","+metricasEstaticas[5]+",";
+        return getHamachiIP() + "," + cpuFree + "," + memoryFreePercentage + "," + diskFreePercentage + "," + rankScore + ","+ bandwidth+"MB/s" +",false"+"-"+metricasEstaticas[0]+","+metricasEstaticas[1]+","+metricasEstaticas[2]+","+metricasEstaticas[3]+","+metricasEstaticas[4]+","+metricasEstaticas[5]+",";
     }
 
     private static void addMetricsToTable(String[] metrics, String[] staticMetrics) {
@@ -390,9 +390,9 @@ public class distributedSystem extends JFrame {
             for (int i = 0; i < tableModel.getRowCount(); i++) {
             	boolean active = !(tableModel.getValueAt(i, 2).equals(metrics[2]) && tableModel.getValueAt(i, 3).equals(metrics[3]) && tableModel.getValueAt(i, 4).equals(metrics[4]));
             	if (!active) {
-                    tableModel.setValueAt("Desconectado", i, 5);
+                    tableModel.setValueAt("Desconectado", i, 6);
             	} else {
-                    tableModel.setValueAt("Conectado", i, 5);
+                    tableModel.setValueAt("Conectado", i, 6);
             	}
             	if (tableModel.getValueAt(i, 0).equals(metrics[0])) {
                     tableModel.setValueAt(metrics[1], i, 1);
@@ -548,13 +548,13 @@ public class distributedSystem extends JFrame {
         }
 
         private void processClientData(String[] clientData, String[] clientStaticData) {
-            if (clientData.length == 6) {
+            if (clientData.length >= 6) {
                 addMetricsToTable(clientData, clientStaticData);
             }
         }
     }
     private static void processClientData(String[] clientData, String[] clientStaticData) {
-        if (clientData.length == 7) {
+        if (clientData.length >= 6) {
             addMetricsToTable(clientData, clientStaticData);
         }
     }
