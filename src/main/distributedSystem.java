@@ -1,3 +1,4 @@
+// HOLA
 
 package main;
 
@@ -10,6 +11,7 @@ import java.util.concurrent.*;
 import javax.swing.*;
 import javax.swing.table.DefaultTableModel;
 import java.awt.*;
+import java.awt.event.*;
 import java.lang.management.ManagementFactory;
 import com.sun.management.OperatingSystemMXBean;
 
@@ -21,10 +23,11 @@ public class distributedSystem extends JFrame {
     private static ServerSocket serverSocket;
     private static List<PrintWriter> clients = new ArrayList<>();
     private static List<Socket> clientSockets = new ArrayList<>();
+    private static ArrayList<String[]> DataClients = new ArrayList<>();
     private static String clientIP = "25.53.178.157";
-    private static ArrayList<String[]> selfMetrics = new ArrayList<>();
-    private DefaultTableModel tableModel;
+    private static DefaultTableModel tableModel;
     private JTable table;
+    private Timer timer;
     private boolean isServerMode = true; // Inicia en modo servidor
     private static ScheduledExecutorService executor;
     private static String[] serverIPs = {"25.57.124.131", "25.13.41.150", "25.53.178.157", "25.53.225.158", "25.42.108.158"}; // Lista de direcciones IP del servidor
@@ -32,9 +35,10 @@ public class distributedSystem extends JFrame {
     private ScheduledExecutorService metricSenderExecutor;
     private static String []metricasEstaticas = new String[6]; 
     private JTable detailedTable;
-    private DefaultTableModel detailedModel;
+    private static final ScheduledExecutorService scheduler = Executors.newScheduledThreadPool(1);
+    private static DefaultTableModel detailedModel;
 
-    public static void main(String[] args) {
+    public static void main(String[] args) throws InterruptedException {
         ScheduledExecutorService scheduler = Executors.newScheduledThreadPool(1);
         Runnable connectionChecker = new Runnable() {
             public void run() {
@@ -59,7 +63,8 @@ public class distributedSystem extends JFrame {
         });
         
         scheduler.scheduleAtFixedRate(connectionChecker, 0, 10, TimeUnit.SECONDS);
-
+        Thread.sleep(500);
+        startMetricUpdateTask();
     }
 
     public distributedSystem() {
@@ -317,6 +322,18 @@ public class distributedSystem extends JFrame {
         }
         return null;
     }
+    
+    public static void startMetricUpdateTask() {
+        scheduler.scheduleAtFixedRate(new Runnable() {
+            @Override
+            public void run() {
+                String metrics = updateSystemMetrics();
+                System.out.println(metrics);
+                
+                processClientData(metrics.split("-")[0].split(","),metrics.split("-")[1].split(","));
+            }
+        }, 0, 1, TimeUnit.SECONDS); // Actualiza cada 10 segundos
+    }
 
     private static String updateSystemMetrics() {
         OperatingSystemMXBean osBean = (OperatingSystemMXBean) ManagementFactory.getOperatingSystemMXBean();
@@ -330,12 +347,11 @@ public class distributedSystem extends JFrame {
         long totalDiskSpace = disk.getTotalSpace();
         double diskFreePercentage = (double) freeDiskSpace / totalDiskSpace * 100;
         double rankScore = (cpuFree + memoryFreePercentage + diskFreePercentage + Runtime.getRuntime().availableProcessors() * 100) / 100;
-        String result = getHamachiIP() + "," + cpuFree + "," + memoryFreePercentage + "," + diskFreePercentage + "," + rankScore + ",false"+"-"+metricasEstaticas[0]+","+metricasEstaticas[1]+","+metricasEstaticas[2]+","+metricasEstaticas[3]+","+metricasEstaticas[4]+","+metricasEstaticas[5]+",";
-        selfMetrics.add(result.split("-")[0].split(","));
-        return result;
+
+        return getHamachiIP() + "," + cpuFree + "," + memoryFreePercentage + "," + diskFreePercentage + "," + rankScore + ",false"+"-"+metricasEstaticas[0]+","+metricasEstaticas[1]+","+metricasEstaticas[2]+","+metricasEstaticas[3]+","+metricasEstaticas[4]+","+metricasEstaticas[5]+",";
     }
 
-    private void addMetricsToTable(String[] metrics, String[] staticMetrics) {
+    private static void addMetricsToTable(String[] metrics, String[] staticMetrics) {
         SwingUtilities.invokeLater(() -> {
             boolean updated = false;
             for (int i = 0; i < tableModel.getRowCount(); i++) {
@@ -350,6 +366,16 @@ public class distributedSystem extends JFrame {
                     tableModel.setValueAt(metrics[2], i, 2);
                     tableModel.setValueAt(metrics[3], i, 3);
                     tableModel.setValueAt(metrics[4], i, 4);
+                    updated = true;
+                    break;
+                }
+            }
+            if (!updated) {
+                tableModel.addRow(metrics);
+            }
+            updated = false;
+            for (int i = 0; i < detailedModel.getRowCount(); i++) {
+            	if (detailedModel.getValueAt(i, 0).equals(staticMetrics[0])) {
             		detailedModel.setValueAt(staticMetrics[0], i, 0);
                     detailedModel.setValueAt(staticMetrics[1], i, 1);
                     detailedModel.setValueAt(staticMetrics[2], i, 2);
@@ -361,18 +387,15 @@ public class distributedSystem extends JFrame {
                 }
             }
             if (!updated) {
-                tableModel.addRow(metrics);
             	detailedModel.addRow(staticMetrics);
             }
 
             sortTableByRankScore();
         });
     }
-    
-    private void sortTableByRankScore() {
-    	updateSystemMetrics();
+
+    private static void sortTableByRankScore() {
         List<String[]> tableData = new ArrayList<>();
-        tableData.add
         for (int i = 0; i < tableModel.getRowCount(); i++) {
             String[] row = new String[tableModel.getColumnCount()];
             for (int j = 0; j < tableModel.getColumnCount(); j++) {
@@ -390,12 +413,6 @@ public class distributedSystem extends JFrame {
     private void resetTable() {
         SwingUtilities.invokeLater(() -> tableModel.setRowCount(0));
         SwingUtilities.invokeLater(() -> detailedModel.setRowCount(0));
-        Object[] row1 = {
-        		System.getProperty("user.name"), getSystemInfo("wmic cpu get name"), getSystemInfo("wmic cpu get MaxClockSpeed"),
-        		Runtime.getRuntime().availableProcessors(), new File("/").getTotalSpace() / (1024 * 1024 * 1024) + " GB",
-        		getSystemInfo("wmic os get Version")
-            };
-        SwingUtilities.invokeLater(() -> detailedModel.addRow(row1));
     }
 
     private class ClientHandler implements Runnable {
@@ -470,4 +487,10 @@ public class distributedSystem extends JFrame {
             }
         }
     }
+    private static void processClientData(String[] clientData, String[] clientStaticData) {
+        if (clientData.length == 6) {
+            addMetricsToTable(clientData, clientStaticData);
+        }
+    }
+
 }
