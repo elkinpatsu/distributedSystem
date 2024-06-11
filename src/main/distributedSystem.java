@@ -37,8 +37,6 @@ public class distributedSystem extends JFrame {
     private JTable detailedTable;
     private static final ScheduledExecutorService scheduler = Executors.newScheduledThreadPool(1);
     private static DefaultTableModel detailedModel;
-    private static double bandwidth = 0;
-
 
     public static void main(String[] args) throws InterruptedException {
         ScheduledExecutorService scheduler = Executors.newScheduledThreadPool(1);
@@ -104,7 +102,7 @@ public class distributedSystem extends JFrame {
         panel.add(switchButton);
 
         // Table for server mode
-        String[] columns = {"IP", "CPU FREE(%)", "MEMORY FREE(%)", "DISK FREE(%)", "RANKSCORE", "BANDWIDTH", "STATUS"};
+        String[] columns = {"IP", "CPU FREE(%)", "MEMORY FREE(%)", "DISK FREE(%)", "RANKSCORE", "ESTATUS"};
         tableModel = new DefaultTableModel(columns, 0);
         table = new JTable(tableModel);
         
@@ -177,24 +175,6 @@ public class distributedSystem extends JFrame {
             switchButton.setText("Switch to Client");
             isServerMode = true;
             stopSendingMetrics();
-        }
-    }
-    
-    private void listenBandWidth() {
-        try (ServerSocket serverSocket = new ServerSocket(9999)) {
-            System.out.println("Server is listening on port 9999");
-            while (true) {
-                try (Socket socket = serverSocket.accept();
-                     BufferedReader reader = new BufferedReader(new InputStreamReader(socket.getInputStream()));
-                     OutputStreamWriter writer = new OutputStreamWriter(socket.getOutputStream())) {
-                    
-                    String message = reader.readLine();
-                    writer.write(message + "\n");
-                    writer.flush();
-                }
-            }
-        } catch (Exception e) {
-            e.printStackTrace();
         }
     }
 
@@ -309,42 +289,11 @@ public class distributedSystem extends JFrame {
         metricSenderExecutor = Executors.newSingleThreadScheduledExecutor();
         metricSenderExecutor.scheduleAtFixedRate(() -> {
             if (out != null) {
-               out.println(updateSystemMetrics());
-               long startTime = System.currentTimeMillis();
+                out.println(updateSystemMetrics());
             }
         }, 0, 1, TimeUnit.SECONDS);
     }
 
-    public static double measureBandwidth(String message) throws Exception {
-    	String serverAddress = clientIP;
-    	int serverPort = 9999;
-        try (Socket socket = new Socket(serverAddress, serverPort);
-             OutputStreamWriter writer = new OutputStreamWriter(socket.getOutputStream());
-             BufferedReader reader = new BufferedReader(new InputStreamReader(socket.getInputStream()))) {
-
-            long startTime = System.currentTimeMillis();
-
-            // Enviar mensaje
-            writer.write(message + "\n");
-            writer.flush();
-
-            // Leer respuesta
-            String response = reader.readLine();
-
-            long endTime = System.currentTimeMillis();
-            long duration = endTime - startTime; // Duración en milisegundos
-
-            int requestSizeInBytes = message.getBytes().length;
-            int responseSizeInBytes = response.getBytes().length;
-            int totalSizeInBytes = requestSizeInBytes + responseSizeInBytes;
-
-            double totalSizeInMegabytes = totalSizeInBytes / (1024.0 * 1024.0);
-            double durationInSeconds = duration / 1000.0;
-
-            return totalSizeInMegabytes / durationInSeconds; // Ancho de banda en MB/s
-        }
-    }
-    
     private void stopSendingMetrics() {
         if (metricSenderExecutor != null) {
             metricSenderExecutor.shutdown();
@@ -378,7 +327,9 @@ public class distributedSystem extends JFrame {
         scheduler.scheduleAtFixedRate(new Runnable() {
             @Override
             public void run() {
-                String metrics = updateSystemMetrics();                
+                String metrics = updateSystemMetrics();
+                System.out.println(metrics);
+                
                 processClientData(metrics.split("-")[0].split(","),metrics.split("-")[1].split(","));
             }
         }, 0, 1, TimeUnit.SECONDS); // Actualiza cada 10 segundos
@@ -396,13 +347,8 @@ public class distributedSystem extends JFrame {
         long totalDiskSpace = disk.getTotalSpace();
         double diskFreePercentage = (double) freeDiskSpace / totalDiskSpace * 100;
         double rankScore = (cpuFree + memoryFreePercentage + diskFreePercentage + Runtime.getRuntime().availableProcessors() * 100) / 100;
-        try {
-			bandwidth = measureBandwidth("obtener ancho de banda");
-		} catch (Exception e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
-		}
-        return getHamachiIP() + "," + cpuFree + "," + memoryFreePercentage + "," + diskFreePercentage + "," + rankScore + ","+ bandwidth+"MB/s" +",false"+"-"+metricasEstaticas[0]+","+metricasEstaticas[1]+","+metricasEstaticas[2]+","+metricasEstaticas[3]+","+metricasEstaticas[4]+","+metricasEstaticas[5]+",";
+
+        return getHamachiIP() + "," + cpuFree + "," + memoryFreePercentage + "," + diskFreePercentage + "," + rankScore + ",false"+"-"+metricasEstaticas[0]+","+metricasEstaticas[1]+","+metricasEstaticas[2]+","+metricasEstaticas[3]+","+metricasEstaticas[4]+","+metricasEstaticas[5]+",";
     }
 
     private static void addMetricsToTable(String[] metrics, String[] staticMetrics) {
@@ -411,16 +357,15 @@ public class distributedSystem extends JFrame {
             for (int i = 0; i < tableModel.getRowCount(); i++) {
             	boolean active = !(tableModel.getValueAt(i, 2).equals(metrics[2]) && tableModel.getValueAt(i, 3).equals(metrics[3]) && tableModel.getValueAt(i, 4).equals(metrics[4]));
             	if (!active) {
-                    tableModel.setValueAt("Desconectado", i, 6);
+                    tableModel.setValueAt("Desconectado", i, 5);
             	} else {
-                    tableModel.setValueAt("Conectado", i, 6);
+                    tableModel.setValueAt("Conectado", i, 5);
             	}
             	if (tableModel.getValueAt(i, 0).equals(metrics[0])) {
                     tableModel.setValueAt(metrics[1], i, 1);
                     tableModel.setValueAt(metrics[2], i, 2);
                     tableModel.setValueAt(metrics[3], i, 3);
                     tableModel.setValueAt(metrics[4], i, 4);
-                    tableModel.setValueAt(metrics[5], i, 5);
             		detailedModel.setValueAt(staticMetrics[0], i, 0);
                     detailedModel.setValueAt(staticMetrics[1], i, 1);
                     detailedModel.setValueAt(staticMetrics[2], i, 2);
@@ -569,13 +514,13 @@ public class distributedSystem extends JFrame {
         }
 
         private void processClientData(String[] clientData, String[] clientStaticData) {
-            if (clientData.length >= 6) {
+            if (clientData.length == 6) {
                 addMetricsToTable(clientData, clientStaticData);
             }
         }
     }
     private static void processClientData(String[] clientData, String[] clientStaticData) {
-        if (clientData.length >= 6) {
+        if (clientData.length == 6) {
             addMetricsToTable(clientData, clientStaticData);
         }
     }
