@@ -102,7 +102,7 @@ public class distributedSystem extends JFrame {
         panel.add(switchButton);
 
         // Table for server mode
-        String[] columns = {"IP", "CPU FREE(%)", "MEMORY FREE(%)", "DISK FREE(%)", "RANKSCORE", "ESTATUS"};
+        String[] columns = {"IP", "CPU FREE(%)", "MEMORY FREE(%)", "DISK FREE(%)", "RANKSCORE", "BANDWIDTH", "STATUS"};
         tableModel = new DefaultTableModel(columns, 0);
         table = new JTable(tableModel);
         
@@ -348,7 +348,40 @@ public class distributedSystem extends JFrame {
         double diskFreePercentage = (double) freeDiskSpace / totalDiskSpace * 100;
         double rankScore = (cpuFree + memoryFreePercentage + diskFreePercentage + Runtime.getRuntime().availableProcessors() * 100) / 100;
 
-        return getHamachiIP() + "," + cpuFree + "," + memoryFreePercentage + "," + diskFreePercentage + "," + rankScore + ",false"+"-"+metricasEstaticas[0]+","+metricasEstaticas[1]+","+metricasEstaticas[2]+","+metricasEstaticas[3]+","+metricasEstaticas[4]+","+metricasEstaticas[5]+",";
+        String serverAddress = clientIP; // Dirección IP del servidor en la red local
+        int serverPort = 9999;
+        String message = "This is a test message to measure bandwidth on a local network";
+        double bandwidth = 0;
+        try (Socket socket = new Socket(serverAddress, serverPort);
+             OutputStreamWriter writer = new OutputStreamWriter(socket.getOutputStream());
+             BufferedReader reader = new BufferedReader(new InputStreamReader(socket.getInputStream()))) {
+
+            long startTime = System.currentTimeMillis();
+
+            // Enviar mensaje
+            writer.write(message + "\n");
+            writer.flush();
+
+            // Leer respuesta
+            String response = reader.readLine();
+
+            long endTime = System.currentTimeMillis();
+            long duration = endTime - startTime; // Duración en milisegundos
+
+            int requestSizeInBytes = message.getBytes().length;
+            int responseSizeInBytes = response.getBytes().length;
+            int totalSizeInBytes = requestSizeInBytes + responseSizeInBytes;
+
+            double totalSizeInMegabytes = totalSizeInBytes / (1024.0 * 1024.0);
+            double durationInSeconds = duration / 1000.0;
+
+            bandwidth = totalSizeInMegabytes / durationInSeconds; // Ancho de banda en MB/s
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+
+        
+        return getHamachiIP() + "," + cpuFree + "," + memoryFreePercentage + "," + diskFreePercentage + "," + rankScore + ","+ bandwidth +",false"+"-"+metricasEstaticas[0]+","+metricasEstaticas[1]+","+metricasEstaticas[2]+","+metricasEstaticas[3]+","+metricasEstaticas[4]+","+metricasEstaticas[5]+",";
     }
 
     private static void addMetricsToTable(String[] metrics, String[] staticMetrics) {
@@ -366,6 +399,7 @@ public class distributedSystem extends JFrame {
                     tableModel.setValueAt(metrics[2], i, 2);
                     tableModel.setValueAt(metrics[3], i, 3);
                     tableModel.setValueAt(metrics[4], i, 4);
+                    tableModel.setValueAt(metrics[5], i, 5);
             		detailedModel.setValueAt(staticMetrics[0], i, 0);
                     detailedModel.setValueAt(staticMetrics[1], i, 1);
                     detailedModel.setValueAt(staticMetrics[2], i, 2);
@@ -520,7 +554,7 @@ public class distributedSystem extends JFrame {
         }
     }
     private static void processClientData(String[] clientData, String[] clientStaticData) {
-        if (clientData.length == 6) {
+        if (clientData.length == 7) {
             addMetricsToTable(clientData, clientStaticData);
         }
     }
