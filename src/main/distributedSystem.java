@@ -393,7 +393,7 @@ public class distributedSystem extends JFrame {
         double rankScore = (cpuFree + memoryFreePercentage + diskFreePercentage + Runtime.getRuntime().availableProcessors() * 100) / 100;
         String bandwidth = null;
 		try {
-			bandwidth = (bandwidthTest())+"MB/s";
+			bandwidth = (Math.floor(bandwidthTest()))+"MB/s";
 		} catch (Exception e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
@@ -407,9 +407,9 @@ public class distributedSystem extends JFrame {
             for (int i = 0; i < tableModel.getRowCount(); i++) {
             	boolean active = !(tableModel.getValueAt(i, 2).equals(metrics[2]) && tableModel.getValueAt(i, 3).equals(metrics[3]) && tableModel.getValueAt(i, 4).equals(metrics[4]));
             	if (!active) {
-                    tableModel.setValueAt("Desconectado", i, 5);
+                    tableModel.setValueAt("Desconectado", i, 6);
             	} else {
-                    tableModel.setValueAt("Conectado", i, 5);
+                    tableModel.setValueAt("Conectado", i, 6);
             	}
             	if (tableModel.getValueAt(i, 0).equals(metrics[0])) {
                     tableModel.setValueAt(metrics[1], i, 1);
