@@ -1,5 +1,3 @@
-// HOLA
-
 package main;
 
 import java.io.*;
@@ -104,7 +102,7 @@ public class distributedSystem extends JFrame {
         panel.add(switchButton);
 
         // Table for server mode
-        String[] columns = {"IP", "CPU FREE(%)", "MEMORY FREE(%)", "DISK FREE(%)", "RANKSCORE", "ESTATUS"};
+        String[] columns = {"IP", "CPU FREE(%)", "MEMORY FREE(%)", "DISK FREE(%)", "BANDWIDTH", "RANKSCORE", "STATUS"};
         tableModel = new DefaultTableModel(columns, 0);
         table = new JTable(tableModel);
         
@@ -342,12 +340,44 @@ public class distributedSystem extends JFrame {
             @Override
             public void run() {
                 String metrics = updateSystemMetrics();
-                System.out.println(metrics);
                 
                 processClientData(metrics.split("-")[0].split(","),metrics.split("-")[1].split(","));
             }
         }, 0, 1, TimeUnit.SECONDS); // Actualiza cada 10 segundos
     }
+    
+    public static double bandwidthTest() throws IOException {
+        // Definir el comando PowerShell
+        String command = "powershell.exe -Command $size=0.015KB;$url='https://speed.hetzner.de/100MB.bin';$duration=(Measure-Command{Invoke-WebRequest-Uri $url-OutFile $env:TEMP\\testfile.bin}).TotalSeconds;$bandwidthMBps=$size/$duration;[Console]::WriteLine($bandwidthMBps)";
+
+        // Ejecutar el comando
+        Process process = Runtime.getRuntime().exec(command);
+
+        // Leer la salida del comanedo
+        BufferedReader reader = new BufferedReader(new InputStreamReader(process.getInputStream()));
+        String line;
+        double bandwidth = 0.0;
+        while ((line = reader.readLine()) != null) {
+            try {
+                bandwidth = Double.parseDouble(line.trim());
+            } catch (NumberFormatException e) {
+                // Si no es un número, ignorar
+            }
+        }
+
+        // Esperar a que el proceso termine
+        try {
+			process.waitFor();
+		} catch (InterruptedException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+
+        // Retornar el ancho de banda
+        return bandwidth;
+
+    }
+
 
     private static String updateSystemMetrics() {	 		
         OperatingSystemMXBean osBean = (OperatingSystemMXBean) ManagementFactory.getOperatingSystemMXBean();
@@ -361,8 +391,14 @@ public class distributedSystem extends JFrame {
         long totalDiskSpace = disk.getTotalSpace();
         double diskFreePercentage = (double) freeDiskSpace / totalDiskSpace * 100;
         double rankScore = (cpuFree + memoryFreePercentage + diskFreePercentage + Runtime.getRuntime().availableProcessors() * 100) / 100;
-
-        return getHamachiIP() + "," + cpuFree + "," + memoryFreePercentage + "," + diskFreePercentage + "," + rankScore + ",false"+"-"+metricasEstaticas[0]+","+metricasEstaticas[1]+","+metricasEstaticas[2]+","+metricasEstaticas[3]+","+metricasEstaticas[4]+","+metricasEstaticas[5]+",";
+        String bandwidth = null;
+		try {
+			bandwidth = (bandwidthTest())+"MB/s";
+		} catch (Exception e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+        return getHamachiIP() + "," + cpuFree + "," + memoryFreePercentage + "," + diskFreePercentage + "," + bandwidth + "," + rankScore + ",false"+"-"+metricasEstaticas[0]+","+metricasEstaticas[1]+","+metricasEstaticas[2]+","+metricasEstaticas[3]+","+metricasEstaticas[4]+","+metricasEstaticas[5]+",";
     }
 
     private static void addMetricsToTable(String[] metrics, String[] staticMetrics) {
@@ -380,6 +416,7 @@ public class distributedSystem extends JFrame {
                     tableModel.setValueAt(metrics[2], i, 2);
                     tableModel.setValueAt(metrics[3], i, 3);
                     tableModel.setValueAt(metrics[4], i, 4);
+                    tableModel.setValueAt(metrics[5], i, 5);
             		detailedModel.setValueAt(staticMetrics[0], i, 0);
                     detailedModel.setValueAt(staticMetrics[1], i, 1);
                     detailedModel.setValueAt(staticMetrics[2], i, 2);
@@ -528,13 +565,13 @@ public class distributedSystem extends JFrame {
         }
 
         private void processClientData(String[] clientData, String[] clientStaticData) {
-            if (clientData.length == 6) {
+            if (clientData.length == 7) {
                 addMetricsToTable(clientData, clientStaticData);
             }
         }
     }
     private static void processClientData(String[] clientData, String[] clientStaticData) {
-        if (clientData.length == 6) {
+        if (clientData.length == 7) {
             addMetricsToTable(clientData, clientStaticData);
         }
     }
