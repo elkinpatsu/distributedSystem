@@ -102,7 +102,7 @@ public class distributedSystem extends JFrame {
         panel.add(switchButton);
 
         // Table for server mode
-        String[] columns = {"IP", "CPU FREE(%)", "MEMORY FREE(%)", "DISK FREE(%)", "BANDWIDTH", "RANKSCORE", "STATUS"};
+        String[] columns = {"IP", "CPU FREE(%)", "MEMORY FREE(%)", "DISK FREE(%)", "RANKSCORE", "BANDWIDTH", "STATUS"};
         tableModel = new DefaultTableModel(columns, 0);
         table = new JTable(tableModel);
         
@@ -393,12 +393,12 @@ public class distributedSystem extends JFrame {
         double rankScore = (cpuFree + memoryFreePercentage + diskFreePercentage + Runtime.getRuntime().availableProcessors() * 100) / 100;
         String bandwidth = null;
 		try {
-			bandwidth = (Math.floor(bandwidthTest()))+"MB/s";
+			bandwidth = (bandwidthTest())+"MB/s";
 		} catch (Exception e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
 		}
-        return getHamachiIP() + "," + cpuFree + "," + memoryFreePercentage + "," + diskFreePercentage + "," + bandwidth + "," + rankScore + ",false"+"-"+metricasEstaticas[0]+","+metricasEstaticas[1]+","+metricasEstaticas[2]+","+metricasEstaticas[3]+","+metricasEstaticas[4]+","+metricasEstaticas[5]+",";
+        return getHamachiIP() + "," + cpuFree + "," + memoryFreePercentage + "," + diskFreePercentage + "," + rankScore + "," + bandwidth + ",false"+"-"+metricasEstaticas[0]+","+metricasEstaticas[1]+","+metricasEstaticas[2]+","+metricasEstaticas[3]+","+metricasEstaticas[4]+","+metricasEstaticas[5]+",";
     }
 
     private static void addMetricsToTable(String[] metrics, String[] staticMetrics) {
@@ -468,7 +468,7 @@ public class distributedSystem extends JFrame {
         Collections.sort(indices, new Comparator<Integer>() {
             @Override
             public int compare(Integer index1, Integer index2) {
-                return Double.compare(Double.parseDouble(tableData.get(index2)[5]), Double.parseDouble(tableData.get(index1)[5]));
+                return Double.compare(Double.parseDouble(tableData.get(index2)[4]), Double.parseDouble(tableData.get(index1)[4]));
             }
         });
 
