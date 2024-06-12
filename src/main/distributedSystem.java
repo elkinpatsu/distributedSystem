@@ -15,6 +15,7 @@ import com.sun.management.OperatingSystemMXBean;
 
 public class distributedSystem extends JFrame {
     private JButton switchButton;
+    private JButton estresButton;
     private static Socket socket;
     private static PrintWriter out;
     private static BufferedReader in;
@@ -100,6 +101,13 @@ public class distributedSystem extends JFrame {
             }
         });
         panel.add(switchButton);
+        
+        estresButton = new JButton("Generar estres");
+        estresButton.addActionListener(e -> {
+            out.println("STRESS " + socket.getLocalAddress().getHostAddress());
+        });
+        panel.add(estresButton);
+
 
         // Table for server mode
         String[] columns = {"IP", "CPU FREE(%)", "MEMORY FREE(%)", "DISK FREE(%)", "RANKSCORE", "BANDWIDTH", "STATUS"};
@@ -276,6 +284,8 @@ public class distributedSystem extends JFrame {
                 String newServerIP = parts[1];
                 switchToNewServer(newServerIP);
             }
+        } else if (message.startsWith("STRESS")) {
+        	arrancaEstres();
         }
     }
 
@@ -443,6 +453,32 @@ public class distributedSystem extends JFrame {
 
             sortTableByRankScore();
         });
+    }
+    
+    static void arrancaEstres() {
+    	System.out.println("-------- SE ARRANCA PRUEBAS DE ESTRES --------");
+    	
+    	List<byte[]> memoryList = new ArrayList<>();
+
+        boolean stressFlag = true;
+
+        while(stressFlag){
+            try{
+                //Carga de CPU
+                for(int i=0;i<100;i++){
+                	Math.atan(Math.sqrt(Math.pow(Math.random()*i,2)));
+                	Math.atan(Math.sqrt(Math.pow(Math.random()*i,2)));
+                }
+
+                byte[] memoryChunk = new byte[1024*1024*(10)]; //5MB
+                memoryList.add(memoryChunk);
+
+            }catch(OutOfMemoryError e){
+                System.err.println("Error: Se ha agotado la memoria disponible");
+                memoryList= new ArrayList<>();
+                stressFlag=false;
+            }
+        }
     }
 
     private static void sortTableByRankScore() {
