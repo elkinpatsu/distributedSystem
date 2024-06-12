@@ -468,7 +468,7 @@ public class distributedSystem extends JFrame {
         Collections.sort(indices, new Comparator<Integer>() {
             @Override
             public int compare(Integer index1, Integer index2) {
-                return Double.compare(Double.parseDouble(tableData.get(index2)[4]), Double.parseDouble(tableData.get(index1)[4]));
+                return Double.compare(Double.parseDouble(tableData.get(index2)[5]), Double.parseDouble(tableData.get(index1)[5]));
             }
         });
 
