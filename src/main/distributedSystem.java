@@ -451,9 +451,12 @@ public class distributedSystem extends JFrame {
         for (int i = 0; i < tableModel.getRowCount(); i++) {
             String[] row = new String[tableModel.getColumnCount()];
             String[] row2 = new String[detailedModel.getColumnCount()];
+            System.out.println(detailedModel.getColumnCount());
             for (int j = 0; j < tableModel.getColumnCount(); j++) {
                 row[j] = tableModel.getValueAt(i, j).toString();
-                row2[j] = detailedModel.getValueAt(i, j).toString();                
+            }
+            for (int j = 0; j < detailedModel.getColumnCount(); j++) {
+                row2[j] = detailedModel.getValueAt(i, j).toString();
             }
             tableData.add(row);
             tableStaticData.add(row2);
