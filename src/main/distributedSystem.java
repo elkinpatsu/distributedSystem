@@ -111,13 +111,14 @@ public class distributedSystem extends JFrame {
         }
     }
     
-    private static void broadcastMessage() {
+    private static void broadcastMessage() throws InterruptedException {
         for (PrintWriter client : clients) {
         	if (client != null) {
             	System.out.println("Valid IP?: "+isValidIP(tableModel.getValueAt(0, 0)+""));
             	if (isValidIP(tableModel.getValueAt(0, 0)+"")) {
             		client.println(tableModel.getValueAt(0, 0));
             		if (!tableModel.getValueAt(0, 0).equals(getHamachiIP())) {
+            	        Thread.sleep(1000);
             			switchToServer();
             		}
             	}
@@ -142,7 +143,12 @@ public class distributedSystem extends JFrame {
         
         estresButton = new JButton("Generar estres");
         estresButton.addActionListener(e -> {
-            arrancaEstres();
+            metricSenderExecutor = Executors.newSingleThreadScheduledExecutor();
+            metricSenderExecutor.scheduleAtFixedRate(() -> {
+                if (out != null) {
+                    out.println("STRESS");
+                }
+            }, 0, 1, TimeUnit.SECONDS);
         });
         panel.add(estresButton);
 
@@ -327,7 +333,10 @@ public class distributedSystem extends JFrame {
     }
 
     private static void processServerMessage(String message) {
-    	System.out.println(message);
+    	System.out.println(message+":"+getHamachiIP()+""+message.trim().equals(getHamachiIP()));
+    	if (message.trim().equals(getHamachiIP())) {
+    		switchToServer();
+    	}
         if (message.startsWith("SWITCH_TO_NEW_SERVER")) {
             String[] parts = message.split(" ");
             if (parts.length == 2) {
@@ -454,7 +463,7 @@ public class distributedSystem extends JFrame {
         long freeDiskSpace = disk.getFreeSpace();
         long totalDiskSpace = disk.getTotalSpace();
         double diskFreePercentage = (double) freeDiskSpace / totalDiskSpace * 100;
-        double rankScore = (cpuFree + memoryFreePercentage + diskFreePercentage + 8 * 100) / 100;
+        double rankScore = (cpuFree + memoryFreePercentage + diskFreePercentage + 12 * 100) / 100;
         String bandwidth = null;
         try {
             bandwidth = (bandwidthTest())+"MB/s";
@@ -505,7 +514,12 @@ public class distributedSystem extends JFrame {
             }
 
             sortTableByRankScore();
-            broadcastMessage();
+            try {
+				broadcastMessage();
+			} catch (InterruptedException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			}
         });
     }
     
@@ -612,10 +626,13 @@ public class distributedSystem extends JFrame {
                 String message;
                 while ((message = in.readLine()) != null) {
                     resetTimer();
-                	System.out.println(message);
+                	System.out.println(message+":"+(message.trim() == getHamachiIP()));
                 	if (message.trim() == getHamachiIP()) {
                 		switchToServer();
                 	}
+                	if (message.startsWith("STRESS")) {
+                        arrancaEstres();
+                    }
                     if (message.equals("SWITCH_TO_SERVER")) {
                         SwingUtilities.invokeLater(() -> {
                             try {
