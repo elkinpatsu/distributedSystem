@@ -9,6 +9,7 @@ import java.util.concurrent.*;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.io.*;
+import java.io.PrintWriter;
 
 import javax.swing.*;
 import javax.swing.table.DefaultTableModel;
@@ -76,6 +77,8 @@ public class distributedSystem extends JFrame {
         });
                 
         scheduler.scheduleAtFixedRate(connectionChecker, 0, 10, TimeUnit.SECONDS);
+
+
         Thread.sleep(500);
         startMetricUpdateTask();
     }
@@ -93,7 +96,7 @@ public class distributedSystem extends JFrame {
         setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
         setSize(1200, 600);
         setupUI();
-        this.clientes = clientes;
+        distributedSystem.clientes = clientes;
         if (isServerMode) {
             try {
                 startServer();
@@ -111,14 +114,18 @@ public class distributedSystem extends JFrame {
     
     private static void broadcastMessage() {
         for (PrintWriter client : clients) {
-            System.out.println("Valid IP?: " + isValidIP(tableModel.getValueAt(0, 0) + ""));
-            if (isValidIP(tableModel.getValueAt(0, 0) + "")) {
-            	if (tableModel.getValueAt(0, 0) + "" != getHamachiIP()) {
+        	if (client != null) {
+                System.out.println("Sending message to client: " + client);
+            	System.out.println("Valid IP?: "+isValidIP(tableModel.getValueAt(0, 0)+""));
+            	if (isValidIP(tableModel.getValueAt(0, 0)+"")) {
             		client.println(tableModel.getValueAt(0, 0));
             	}
+            } else {
+                System.out.println("Client is null.");
             }
         }
     }
+    
     
     private void setupUI() {
         JPanel panel = new JPanel();
@@ -288,7 +295,7 @@ public class distributedSystem extends JFrame {
                 try {
                     String message;
                     while ((message = in.readLine()) != null) {
-                    	processServerMessage(message);
+                        processServerMessage(message);
                     }
                 } catch (IOException e) {
                     reconnectToNextServer();
@@ -321,12 +328,8 @@ public class distributedSystem extends JFrame {
     }
 
     private static void processServerMessage(String message) {
-        System.out.println(message);
-    	if (isValidIP(message)) {
-        	if (!isServerMode && message == getHamachiIP()) {
-        		switchToServer();
-        	}
-        } else if (message.startsWith("SWITCH_TO_NEW_SERVER")) {
+    	System.out.println(message);
+        if (message.startsWith("SWITCH_TO_NEW_SERVER")) {
             String[] parts = message.split(" ");
             if (parts.length == 2) {
                 String newServerIP = parts[1];
@@ -398,8 +401,8 @@ public class distributedSystem extends JFrame {
             @Override
             public void run() {
                 String metrics = updateSystemMetrics();
+                
                 processClientData(metrics.split("-")[0].split(","),metrics.split("-")[1].split(","));
-                broadcastMessage();
             }
         }, 0, 1, TimeUnit.SECONDS); // Actualiza cada 10 segundos
     }
@@ -447,7 +450,7 @@ public class distributedSystem extends JFrame {
         long freeDiskSpace = disk.getFreeSpace();
         long totalDiskSpace = disk.getTotalSpace();
         double diskFreePercentage = (double) freeDiskSpace / totalDiskSpace * 100;
-        double rankScore = ((cpuFree/2) + (memoryFreePercentage*2) + (diskFreePercentage/2) + (8 * 50)) / 100;
+        double rankScore = (cpuFree + memoryFreePercentage + diskFreePercentage + 8 * 100) / 100;
         String bandwidth = null;
         try {
             bandwidth = (bandwidthTest())+"MB/s";
@@ -603,7 +606,19 @@ public class distributedSystem extends JFrame {
             try {
                 String message;
                 while ((message = in.readLine()) != null) {
-                    processClientData(message.split("-")[0].split(","),message.split("-")[1].split(","));
+                    resetTimer();
+                	System.out.println(message);	
+                    if (message.equals("SWITCH_TO_SERVER")) {
+                        SwingUtilities.invokeLater(() -> {
+                            try {
+                                switchMode();
+                            } catch (IOException e) {
+                                e.printStackTrace();
+                            }
+                        });
+                    } else {
+                        processClientData(message.split("-")[0].split(","),message.split("-")[1].split(","));
+                    }
                 }
             } catch (IOException e) {
                 e.printStackTrace();
