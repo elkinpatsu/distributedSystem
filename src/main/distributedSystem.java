@@ -324,7 +324,7 @@ public class distributedSystem extends JFrame {
 
     private static void processServerMessage(String message) {
         System.out.println(message);
-        if (isValidIP(message)) {
+    	if (isValidIP(message)) {
         	if (!isServerMode && message == getHamachiIP()) {
         		switchToServer();
         	}
@@ -449,7 +449,7 @@ public class distributedSystem extends JFrame {
         long freeDiskSpace = disk.getFreeSpace();
         long totalDiskSpace = disk.getTotalSpace();
         double diskFreePercentage = (double) freeDiskSpace / totalDiskSpace * 100;
-        double rankScore = (cpuFree + memoryFreePercentage + diskFreePercentage + 8 * 100) / 100;
+        double rankScore = ((cpuFree/2) + (memoryFreePercentage*2) + (diskFreePercentage/2) + (8 * 50)) / 100;
         String bandwidth = null;
         try {
             bandwidth = (bandwidthTest())+"MB/s";
@@ -606,7 +606,6 @@ public class distributedSystem extends JFrame {
                 String message;
                 while ((message = in.readLine()) != null) {
                     resetTimer();
-                	System.out.println(message);	
                     if (message.equals("SWITCH_TO_SERVER")) {
                         SwingUtilities.invokeLater(() -> {
                             try {
