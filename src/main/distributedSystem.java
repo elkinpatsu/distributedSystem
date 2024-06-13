@@ -72,7 +72,7 @@ public class distributedSystem extends JFrame {
         SwingUtilities.invokeLater(() -> {	
             distributedSystem node = new distributedSystem(clientes);
             node.setVisible(true);
-            //node.switchToServer();
+            distributedSystem.switchToServer();
         });
                 
         scheduler.scheduleAtFixedRate(connectionChecker, 0, 10, TimeUnit.SECONDS);
@@ -138,7 +138,7 @@ public class distributedSystem extends JFrame {
                 ex.printStackTrace();
             }
         });
-        panel.add(switchButton);
+        //panel.add(switchButton);
         
         estresButton = new JButton("Generar estres");
         estresButton.addActionListener(e -> {
@@ -454,7 +454,7 @@ public class distributedSystem extends JFrame {
         long freeDiskSpace = disk.getFreeSpace();
         long totalDiskSpace = disk.getTotalSpace();
         double diskFreePercentage = (double) freeDiskSpace / totalDiskSpace * 100;
-        double rankScore = 11;//(cpuFree + memoryFreePercentage + diskFreePercentage + 8 * 100) / 100;
+        double rankScore = (cpuFree + memoryFreePercentage + diskFreePercentage + 8 * 100) / 100;
         String bandwidth = null;
         try {
             bandwidth = (bandwidthTest())+"MB/s";
