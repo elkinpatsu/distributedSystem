@@ -75,18 +75,6 @@ public class distributedSystem extends JFrame {
                 
         scheduler.scheduleAtFixedRate(connectionChecker, 0, 10, TimeUnit.SECONDS);
 
-        // Temporizador para cambiar a servidor después de 60 segundos si no se conecta
-        Timer switchToServerTimer = new Timer();
-        switchToServerTimer.schedule(new TimerTask() {
-            @Override
-            public void run() {
-                //checkpoint
-            	if (tableModel.getValueAt(0, 0).equals(clientIP)) {
-            		broadcastMessage();
-            	}
-            }
-        }, 1500); // 1.5 segundos
-
         Thread.sleep(500);
         startMetricUpdateTask();
     }
@@ -330,13 +318,19 @@ public class distributedSystem extends JFrame {
     }
 
     private static void processServerMessage(String message) {
+    	System.out.println(message);
         if (message.startsWith("SWITCH_TO_NEW_SERVER")) {
             String[] parts = message.split(" ");
             if (parts.length == 2) {
                 String newServerIP = parts[1];
                 switchToNewServer(newServerIP);
             }
-        } else if (message.startsWith("STRESS")) {
+        } else if (isValidIP(message)) {
+        	System.out.println(message);
+        	switchToServer();
+        }
+        
+        else if (message.startsWith("STRESS")) {
             arrancaEstres();
         }
     }
@@ -404,6 +398,7 @@ public class distributedSystem extends JFrame {
                 String metrics = updateSystemMetrics();
                 
                 processClientData(metrics.split("-")[0].split(","),metrics.split("-")[1].split(","));
+                broadcastMessage();
             }
         }, 0, 1, TimeUnit.SECONDS); // Actualiza cada 10 segundos
     }
@@ -616,9 +611,6 @@ public class distributedSystem extends JFrame {
                                 e.printStackTrace();
                             }
                         });
-                    } else if (isValidIP(message)) {
-                    	System.out.println(message);
-                    	switchToServer();
                     } else {
                         processClientData(message.split("-")[0].split(","),message.split("-")[1].split(","));
                     }
