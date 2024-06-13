@@ -9,7 +9,6 @@ import java.util.concurrent.*;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.io.*;
-import java.io.PrintWriter;
 
 import javax.swing.*;
 import javax.swing.table.DefaultTableModel;
@@ -115,13 +114,13 @@ public class distributedSystem extends JFrame {
     private static void broadcastMessage() {
         for (PrintWriter client : clients) {
         	if (client != null) {
-                System.out.println("Sending message to client: " + client);
             	System.out.println("Valid IP?: "+isValidIP(tableModel.getValueAt(0, 0)+""));
             	if (isValidIP(tableModel.getValueAt(0, 0)+"")) {
+            		if (!tableModel.getValueAt(0, 0).equals(getHamachiIP())) {
+            			switchToServer();
+            		}
             		client.println(tableModel.getValueAt(0, 0));
             	}
-            } else {
-                System.out.println("Client is null.");
             }
         }
     }
@@ -402,7 +401,12 @@ public class distributedSystem extends JFrame {
             public void run() {
                 String metrics = updateSystemMetrics();
                 
-                processClientData(metrics.split("-")[0].split(","),metrics.split("-")[1].split(","));
+                try {
+					processClientData(metrics.split("-")[0].split(","),metrics.split("-")[1].split(","));
+				} catch (IOException e) {
+					// TODO Auto-generated catch block
+					e.printStackTrace();
+				}
             }
         }, 0, 1, TimeUnit.SECONDS); // Actualiza cada 10 segundos
     }
@@ -450,7 +454,7 @@ public class distributedSystem extends JFrame {
         long freeDiskSpace = disk.getFreeSpace();
         long totalDiskSpace = disk.getTotalSpace();
         double diskFreePercentage = (double) freeDiskSpace / totalDiskSpace * 100;
-        double rankScore = (cpuFree + memoryFreePercentage + diskFreePercentage + 8 * 100) / 100;
+        double rankScore = 7;//(cpuFree + memoryFreePercentage + diskFreePercentage + 8 * 100) / 100;
         String bandwidth = null;
         try {
             bandwidth = (bandwidthTest())+"MB/s";
@@ -460,7 +464,7 @@ public class distributedSystem extends JFrame {
         return getHamachiIP() + "," + cpuFree + "," + memoryFreePercentage + "," + diskFreePercentage + "," + rankScore + "," + bandwidth + ",false"+"-"+metricasEstaticas[0]+","+metricasEstaticas[1]+","+metricasEstaticas[2]+","+metricasEstaticas[3]+","+metricasEstaticas[4]+","+metricasEstaticas[5]+",";
     }
 
-    private static void addMetricsToTable(String[] metrics, String[] staticMetrics) {
+    private static void addMetricsToTable(String[] metrics, String[] staticMetrics) throws IOException {
         SwingUtilities.invokeLater(() -> {
             boolean updated = false;
             for (int i = 0; i < tableModel.getRowCount(); i++) {
@@ -501,6 +505,7 @@ public class distributedSystem extends JFrame {
             }
 
             sortTableByRankScore();
+            broadcastMessage();
         });
     }
     
@@ -607,7 +612,10 @@ public class distributedSystem extends JFrame {
                 String message;
                 while ((message = in.readLine()) != null) {
                     resetTimer();
-                	System.out.println(message);	
+                	System.out.println(message);
+                	if (message == getHamachiIP()) {
+                		switchToServer();
+                	}
                     if (message.equals("SWITCH_TO_SERVER")) {
                         SwingUtilities.invokeLater(() -> {
                             try {
@@ -651,13 +659,13 @@ public class distributedSystem extends JFrame {
             });
         }
 
-        private void processClientData(String[] clientData, String[] clientStaticData) {
+        private void processClientData(String[] clientData, String[] clientStaticData) throws IOException {
             if (clientData.length == 7) {
                 addMetricsToTable(clientData, clientStaticData);
             }
         }
     }
-    private static void processClientData(String[] clientData, String[] clientStaticData) {
+    private static void processClientData(String[] clientData, String[] clientStaticData) throws IOException {
         if (clientData.length == 7) {
             addMetricsToTable(clientData, clientStaticData);
         }
