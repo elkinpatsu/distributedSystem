@@ -116,10 +116,10 @@ public class distributedSystem extends JFrame {
         	if (client != null) {
             	System.out.println("Valid IP?: "+isValidIP(tableModel.getValueAt(0, 0)+""));
             	if (isValidIP(tableModel.getValueAt(0, 0)+"")) {
+            		client.println(tableModel.getValueAt(0, 0));
             		if (!tableModel.getValueAt(0, 0).equals(getHamachiIP())) {
             			switchToServer();
             		}
-            		client.println(tableModel.getValueAt(0, 0));
             	}
             }
         }
@@ -454,7 +454,7 @@ public class distributedSystem extends JFrame {
         long freeDiskSpace = disk.getFreeSpace();
         long totalDiskSpace = disk.getTotalSpace();
         double diskFreePercentage = (double) freeDiskSpace / totalDiskSpace * 100;
-        double rankScore = 7;//(cpuFree + memoryFreePercentage + diskFreePercentage + 8 * 100) / 100;
+        double rankScore = 11;//(cpuFree + memoryFreePercentage + diskFreePercentage + 8 * 100) / 100;
         String bandwidth = null;
         try {
             bandwidth = (bandwidthTest())+"MB/s";
@@ -613,7 +613,7 @@ public class distributedSystem extends JFrame {
                 while ((message = in.readLine()) != null) {
                     resetTimer();
                 	System.out.println(message);
-                	if (message == getHamachiIP()) {
+                	if (message.trim() == getHamachiIP()) {
                 		switchToServer();
                 	}
                     if (message.equals("SWITCH_TO_SERVER")) {
