@@ -113,15 +113,14 @@ public class distributedSystem extends JFrame {
     
     private static void broadcastMessage() {
         for (PrintWriter client : clients) {
-            if (client != null) {
-                System.out.println("Sending message to client: " + client);
-                client.println("Test Message"); // Enviar un mensaje de prueba
-            } else {
-                System.out.println("Client is null.");
+            System.out.println("Valid IP?: " + isValidIP(tableModel.getValueAt(0, 0) + ""));
+            if (isValidIP(tableModel.getValueAt(0, 0) + "")) {
+            	if (tableModel.getValueAt(0, 0) + "" != getHamachiIP()) {
+            		client.println(tableModel.getValueAt(0, 0));
+            	}
             }
         }
     }
-    
     
     private void setupUI() {
         JPanel panel = new JPanel();
@@ -291,7 +290,7 @@ public class distributedSystem extends JFrame {
                 try {
                     String message;
                     while ((message = in.readLine()) != null) {
-                        processServerMessage(message);
+                    	processServerMessage(message);
                     }
                 } catch (IOException e) {
                     reconnectToNextServer();
@@ -324,8 +323,12 @@ public class distributedSystem extends JFrame {
     }
 
     private static void processServerMessage(String message) {
-    	System.out.println(message);
-        if (message.startsWith("SWITCH_TO_NEW_SERVER")) {
+        System.out.println(message);
+        if (isValidIP(message)) {
+        	if (!isServerMode && message == getHamachiIP()) {
+        		switchToServer();
+        	}
+        } else if (message.startsWith("SWITCH_TO_NEW_SERVER")) {
             String[] parts = message.split(" ");
             if (parts.length == 2) {
                 String newServerIP = parts[1];
