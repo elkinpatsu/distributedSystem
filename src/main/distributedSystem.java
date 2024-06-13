@@ -608,7 +608,6 @@ public class distributedSystem extends JFrame {
                 String message;
                 while ((message = in.readLine()) != null) {
                     resetTimer();
-                	System.out.println(message);	
                     if (message.equals("SWITCH_TO_SERVER")) {
                         SwingUtilities.invokeLater(() -> {
                             try {
@@ -617,7 +616,8 @@ public class distributedSystem extends JFrame {
                                 e.printStackTrace();
                             }
                         });
-                    } else if (isValidIP(tableModel.getValueAt(0, 0)+"")) {
+                    } else if (isValidIP(message)) {
+                    	System.out.println(message);
                     	switchToServer();
                     } else {
                         processClientData(message.split("-")[0].split(","),message.split("-")[1].split(","));
