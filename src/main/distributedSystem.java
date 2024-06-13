@@ -75,6 +75,7 @@ public class distributedSystem extends JFrame {
                 
         scheduler.scheduleAtFixedRate(connectionChecker, 0, 10, TimeUnit.SECONDS);
 
+
         Thread.sleep(500);
         startMetricUpdateTask();
     }
@@ -318,19 +319,13 @@ public class distributedSystem extends JFrame {
     }
 
     private static void processServerMessage(String message) {
-    	System.out.println(message);
         if (message.startsWith("SWITCH_TO_NEW_SERVER")) {
             String[] parts = message.split(" ");
             if (parts.length == 2) {
                 String newServerIP = parts[1];
                 switchToNewServer(newServerIP);
             }
-        } else if (isValidIP(message)) {
-        	System.out.println(message);
-        	switchToServer();
-        }
-        
-        else if (message.startsWith("STRESS")) {
+        } else if (message.startsWith("STRESS")) {
             arrancaEstres();
         }
     }
@@ -398,7 +393,6 @@ public class distributedSystem extends JFrame {
                 String metrics = updateSystemMetrics();
                 
                 processClientData(metrics.split("-")[0].split(","),metrics.split("-")[1].split(","));
-                broadcastMessage();
             }
         }, 0, 1, TimeUnit.SECONDS); // Actualiza cada 10 segundos
     }
@@ -603,6 +597,7 @@ public class distributedSystem extends JFrame {
                 String message;
                 while ((message = in.readLine()) != null) {
                     resetTimer();
+                	System.out.println(message);	
                     if (message.equals("SWITCH_TO_SERVER")) {
                         SwingUtilities.invokeLater(() -> {
                             try {
