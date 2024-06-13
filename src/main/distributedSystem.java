@@ -76,8 +76,6 @@ public class distributedSystem extends JFrame {
         });
                 
         scheduler.scheduleAtFixedRate(connectionChecker, 0, 10, TimeUnit.SECONDS);
-
-
         Thread.sleep(500);
         startMetricUpdateTask();
     }
@@ -605,18 +603,7 @@ public class distributedSystem extends JFrame {
             try {
                 String message;
                 while ((message = in.readLine()) != null) {
-                    resetTimer();
-                    if (message.equals("SWITCH_TO_SERVER")) {
-                        SwingUtilities.invokeLater(() -> {
-                            try {
-                                switchMode();
-                            } catch (IOException e) {
-                                e.printStackTrace();
-                            }
-                        });
-                    } else {
-                        processClientData(message.split("-")[0].split(","),message.split("-")[1].split(","));
-                    }
+                    processClientData(message.split("-")[0].split(","),message.split("-")[1].split(","));
                 }
             } catch (IOException e) {
                 e.printStackTrace();
