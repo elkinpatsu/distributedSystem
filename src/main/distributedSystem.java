@@ -6,6 +6,9 @@ import java.util.*;
 import java.util.List;
 import java.util.Timer;
 import java.util.concurrent.*;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
+
 import javax.swing.*;
 import javax.swing.table.DefaultTableModel;
 import java.awt.*;
@@ -14,7 +17,7 @@ import java.lang.management.ManagementFactory;
 import com.sun.management.OperatingSystemMXBean;
 
 public class distributedSystem extends JFrame {
-    private JButton switchButton;
+    private static JButton switchButton;
     private JButton estresButton;
     private static Socket socket;
     private static PrintWriter out;
@@ -27,17 +30,23 @@ public class distributedSystem extends JFrame {
     private static DefaultTableModel tableModel;
     private JTable table;
     private Timer timer;
-    private boolean isServerMode = true; // Inicia en modo servidor
+    private static boolean isServerMode = true; // Inicia en modo servidor
     private static ScheduledExecutorService executor;
     private static String[] serverIPs = {"25.57.124.131", "25.13.41.150", "25.53.178.157", "25.53.225.158", "25.42.108.158"}; // Lista de direcciones IP del servidor
     private static int currentServerIndex = 0;
-    private ScheduledExecutorService metricSenderExecutor;
-    private static String []metricasEstaticas = new String[6]; 
+    private static ScheduledExecutorService metricSenderExecutor;
+    private static String[] metricasEstaticas = new String[6]; 
     private JTable detailedTable;
     private static final ScheduledExecutorService scheduler = Executors.newScheduledThreadPool(1);
     private static DefaultTableModel detailedModel;
+    private static int timeout = 0;
     private static OperatingSystemMXBean osBean = (OperatingSystemMXBean) ManagementFactory.getOperatingSystemMXBean();
-
+    private static boolean connected = false;
+    private static final String IP_REGEX = "^(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\\."
+            + "(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\\."
+            + "(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\\."
+            + "(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)$";
+    private static final Pattern IP_PATTERN = Pattern.compile(IP_REGEX);
 
     public static void main(String[] args) throws InterruptedException {
         ScheduledExecutorService scheduler = Executors.newScheduledThreadPool(1);
@@ -59,15 +68,37 @@ public class distributedSystem extends JFrame {
         }
 
         SwingUtilities.invokeLater(() -> {	
-        	distributedSystem node = new distributedSystem();
+            distributedSystem node = new distributedSystem();
             node.setVisible(true);
+            //node.switchToServer();
         });
-        
+                
         scheduler.scheduleAtFixedRate(connectionChecker, 0, 10, TimeUnit.SECONDS);
+
+        // Temporizador para cambiar a servidor después de 60 segundos si no se conecta
+        Timer switchToServerTimer = new Timer();
+        switchToServerTimer.schedule(new TimerTask() {
+            @Override
+            public void run() {
+                //checkpoint
+            	if (tableModel.getValueAt(0, 0).equals(clientIP)) {
+            		broadcastMessage();
+            	}
+            }
+        }, 1500); // 1.5 segundos
+
         Thread.sleep(500);
         startMetricUpdateTask();
     }
 
+    public static void switchToServer() {
+        try {
+            switchMode();
+        } catch (IOException ex) {
+            ex.printStackTrace();
+        }    	
+    }
+    
     public distributedSystem() {
         super("Network Node");
         setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
@@ -88,6 +119,16 @@ public class distributedSystem extends JFrame {
         }
     }
 
+    private static void broadcastMessage() {
+        for (PrintWriter client : clients) {
+        	System.out.println("Valid IP?: "+isValidIP(tableModel.getValueAt(0, 0)+""));
+        	if (isValidIP(tableModel.getValueAt(0, 0)+"")) {
+        		client.println(tableModel.getValueAt(0, 0));
+        	}
+        }
+    }
+    
+    
     private void setupUI() {
         JPanel panel = new JPanel();
         add(panel);
@@ -104,7 +145,7 @@ public class distributedSystem extends JFrame {
         
         estresButton = new JButton("Generar estres");
         estresButton.addActionListener(e -> {
-            out.println("STRESS " + socket.getLocalAddress().getHostAddress());
+            arrancaEstres();
         });
         panel.add(estresButton);
 
@@ -118,12 +159,12 @@ public class distributedSystem extends JFrame {
         String[] detailedColumnNames = { "dispositivo",
             "Procesador", "Velocidad", "Nucleos", "Almacenamiento",
             "OSVersion"
-	        };
+            };
 
         Object[] row1 = {
-        		System.getProperty("user.name"), getSystemInfo("wmic cpu get name"), getSystemInfo("wmic cpu get MaxClockSpeed"),
-        		Runtime.getRuntime().availableProcessors(), new File("/").getTotalSpace() / (1024 * 1024 * 1024) + " GB",
-        		getSystemInfo("wmic os get Version")
+                System.getProperty("user.name"), getSystemInfo("wmic cpu get name"), getSystemInfo("wmic cpu get MaxClockSpeed"),
+                Runtime.getRuntime().availableProcessors(), new File("/").getTotalSpace() / (1024 * 1024 * 1024) + " GB",
+                getSystemInfo("wmic os get Version")
             };
         
         metricasEstaticas[0] = System.getProperty("user.name");
@@ -176,7 +217,7 @@ public class distributedSystem extends JFrame {
     }
 
 
-    private void switchMode() throws IOException {
+    private static void switchMode() throws IOException {
         if (isServerMode) {
             // Modo servidor a cliente
             //notifyClientsToSwitch(clientIP);
@@ -198,7 +239,7 @@ public class distributedSystem extends JFrame {
         }
     }
 
-    private void notifyServerSwitching() throws IOException {
+    private static void notifyServerSwitching() throws IOException {
         if (out != null) {
             out.println("SWITCHING_TO_SERVER " + socket.getLocalAddress().getHostAddress());
         }
@@ -210,7 +251,7 @@ public class distributedSystem extends JFrame {
         }
     }
 
-    private void startServer() throws IOException {
+    private static void startServer() throws IOException {
         serverSocket = new ServerSocket(9999);
         executor = Executors.newScheduledThreadPool(10);
         executor.scheduleAtFixedRate(() -> {
@@ -226,7 +267,15 @@ public class distributedSystem extends JFrame {
         }, 0, 1, TimeUnit.SECONDS);
     }
 
-    private void stopServer() throws IOException {
+    public static boolean isValidIP(String ip) {
+        if (ip == null) {
+            return false;
+        }
+        Matcher matcher = IP_PATTERN.matcher(ip);
+        return matcher.matches();
+    }
+    
+    private static void stopServer() throws IOException {
         if (serverSocket != null) {
             serverSocket.close();
             for (Socket clientSocket : clientSockets) {
@@ -243,6 +292,7 @@ public class distributedSystem extends JFrame {
             socket = new Socket(serverIP, port);
             out = new PrintWriter(socket.getOutputStream(), true);
             in = new BufferedReader(new InputStreamReader(socket.getInputStream()));
+            connected = true;
             new Thread(() -> {
                 try {
                     String message;
@@ -263,12 +313,14 @@ public class distributedSystem extends JFrame {
             socket.close();
             out.close();
             in.close();
+            connected = false;
         }
     }
 
     private static void reconnectToNextServer() {
         currentServerIndex = (currentServerIndex + 1) % serverIPs.length;
         String nextServerIP = serverIPs[currentServerIndex];
+        timeout++;
         try {
             startClient(nextServerIP, 9999);
         } catch (IOException e) {
@@ -285,7 +337,7 @@ public class distributedSystem extends JFrame {
                 switchToNewServer(newServerIP);
             }
         } else if (message.startsWith("STRESS")) {
-        	arrancaEstres();
+            arrancaEstres();
         }
     }
 
@@ -307,7 +359,7 @@ public class distributedSystem extends JFrame {
         }
     }
     
-    private void startSendingMetrics() {
+    private static void startSendingMetrics() {
         metricSenderExecutor = Executors.newSingleThreadScheduledExecutor();
         metricSenderExecutor.scheduleAtFixedRate(() -> {
             if (out != null) {
@@ -316,7 +368,7 @@ public class distributedSystem extends JFrame {
         }, 0, 1, TimeUnit.SECONDS);
     }
 
-    private void stopSendingMetrics() {
+    private static void stopSendingMetrics() {
         if (metricSenderExecutor != null) {
             metricSenderExecutor.shutdown();
         }
@@ -377,11 +429,10 @@ public class distributedSystem extends JFrame {
 
         // Esperar a que el proceso termine
         try {
-			process.waitFor();
-		} catch (InterruptedException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
-		}
+            process.waitFor();
+        } catch (InterruptedException e) {
+            e.printStackTrace();
+        }
 
         // Retornar el ancho de banda
         return bandwidth;
@@ -389,7 +440,7 @@ public class distributedSystem extends JFrame {
     }
 
 
-    private static String updateSystemMetrics() {	 		
+    private static String updateSystemMetrics() {         
         OperatingSystemMXBean osBean = (OperatingSystemMXBean) ManagementFactory.getOperatingSystemMXBean();
         double cpuLoad = osBean.getSystemCpuLoad() * 100;
         double cpuFree = 100 - cpuLoad;
@@ -400,14 +451,13 @@ public class distributedSystem extends JFrame {
         long freeDiskSpace = disk.getFreeSpace();
         long totalDiskSpace = disk.getTotalSpace();
         double diskFreePercentage = (double) freeDiskSpace / totalDiskSpace * 100;
-        double rankScore = (cpuFree + memoryFreePercentage + diskFreePercentage + Runtime.getRuntime().availableProcessors() * 100) / 100;
+        double rankScore = (cpuFree + memoryFreePercentage + diskFreePercentage + 8 * 100) / 100;
         String bandwidth = null;
-		try {
-			bandwidth = (bandwidthTest())+"MB/s";
-		} catch (Exception e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
-		}
+        try {
+            bandwidth = (bandwidthTest())+"MB/s";
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
         return getHamachiIP() + "," + cpuFree + "," + memoryFreePercentage + "," + diskFreePercentage + "," + rankScore + "," + bandwidth + ",false"+"-"+metricasEstaticas[0]+","+metricasEstaticas[1]+","+metricasEstaticas[2]+","+metricasEstaticas[3]+","+metricasEstaticas[4]+","+metricasEstaticas[5]+",";
     }
 
@@ -415,19 +465,19 @@ public class distributedSystem extends JFrame {
         SwingUtilities.invokeLater(() -> {
             boolean updated = false;
             for (int i = 0; i < tableModel.getRowCount(); i++) {
-            	boolean active = !(tableModel.getValueAt(i, 2).equals(metrics[2]) && tableModel.getValueAt(i, 3).equals(metrics[3]) && tableModel.getValueAt(i, 4).equals(metrics[4]));
-            	if (!active) {
+                boolean active = !(tableModel.getValueAt(i, 2).equals(metrics[2]) && tableModel.getValueAt(i, 3).equals(metrics[3]) && tableModel.getValueAt(i, 4).equals(metrics[4]));
+                if (!active) {
                     tableModel.setValueAt("Desconectado", i, 6);
-            	} else {
+                } else {
                     tableModel.setValueAt("Conectado", i, 6);
-            	}
-            	if (tableModel.getValueAt(i, 0).equals(metrics[0])) {
+                }
+                if (tableModel.getValueAt(i, 0).equals(metrics[0])) {
                     tableModel.setValueAt(metrics[1], i, 1);
                     tableModel.setValueAt(metrics[2], i, 2);
                     tableModel.setValueAt(metrics[3], i, 3);
                     tableModel.setValueAt(metrics[4], i, 4);
                     tableModel.setValueAt(metrics[5], i, 5);
-            		detailedModel.setValueAt(staticMetrics[0], i, 0);
+                    detailedModel.setValueAt(staticMetrics[0], i, 0);
                     detailedModel.setValueAt(staticMetrics[1], i, 1);
                     detailedModel.setValueAt(staticMetrics[2], i, 2);
                     detailedModel.setValueAt(staticMetrics[3], i, 3);
@@ -442,13 +492,13 @@ public class distributedSystem extends JFrame {
             }
             updated = false;
             for (int i = 0; i < detailedModel.getRowCount(); i++) {
-            	if (detailedModel.getValueAt(i, 0).equals(staticMetrics[0])) {
+                if (detailedModel.getValueAt(i, 0).equals(staticMetrics[0])) {
                     updated = true;
                     break;
                 }
             }
             if (!updated) {
-            	detailedModel.addRow(staticMetrics);
+                detailedModel.addRow(staticMetrics);
             }
 
             sortTableByRankScore();
@@ -456,9 +506,9 @@ public class distributedSystem extends JFrame {
     }
     
     static void arrancaEstres() {
-    	System.out.println("-------- SE ARRANCA PRUEBAS DE ESTRES --------");
-    	
-    	List<byte[]> memoryList = new ArrayList<>();
+        System.out.println("-------- SE ARRANCA PRUEBAS DE ESTRES --------");
+        
+        List<byte[]> memoryList = new ArrayList<>();
 
         boolean stressFlag = true;
 
@@ -466,8 +516,8 @@ public class distributedSystem extends JFrame {
             try{
                 //Carga de CPU
                 for(int i=0;i<100;i++){
-                	Math.atan(Math.sqrt(Math.pow(Math.random()*i,2)));
-                	Math.atan(Math.sqrt(Math.pow(Math.random()*i,2)));
+                    Math.atan(Math.sqrt(Math.pow(Math.random()*i,2)));
+                    Math.atan(Math.sqrt(Math.pow(Math.random()*i,2)));
                 }
 
                 byte[] memoryChunk = new byte[1024*1024*(10)]; //5MB
@@ -487,7 +537,6 @@ public class distributedSystem extends JFrame {
         for (int i = 0; i < tableModel.getRowCount(); i++) {
             String[] row = new String[tableModel.getColumnCount()];
             String[] row2 = new String[detailedModel.getColumnCount()];
-            System.out.println(detailedModel.getColumnCount());
             for (int j = 0; j < tableModel.getColumnCount(); j++) {
                 row[j] = tableModel.getValueAt(i, j).toString();
             }
@@ -532,15 +581,15 @@ public class distributedSystem extends JFrame {
         
     }
 
-    private void resetTable() {
+    private static void resetTable() {
         SwingUtilities.invokeLater(() -> tableModel.setRowCount(0));
         SwingUtilities.invokeLater(() -> detailedModel.setRowCount(0));
     }
 
-    private class ClientHandler implements Runnable {
+    private static class ClientHandler implements Runnable {
         private Socket socket;
         private BufferedReader in;
-		private Timer timer;
+        private Timer timer;
 
         public ClientHandler(Socket socket) {
             this.socket = socket;
@@ -559,15 +608,17 @@ public class distributedSystem extends JFrame {
                 String message;
                 while ((message = in.readLine()) != null) {
                     resetTimer();
+                	System.out.println(message);	
                     if (message.equals("SWITCH_TO_SERVER")) {
                         SwingUtilities.invokeLater(() -> {
-							try {
-								switchMode();
-							} catch (IOException e) {
-								// TODO Auto-generated catch block
-								e.printStackTrace();
-							}
-						});
+                            try {
+                                switchMode();
+                            } catch (IOException e) {
+                                e.printStackTrace();
+                            }
+                        });
+                    } else if (isValidIP(tableModel.getValueAt(0, 0)+"")) {
+                    	switchToServer();
                     } else {
                         processClientData(message.split("-")[0].split(","),message.split("-")[1].split(","));
                     }
