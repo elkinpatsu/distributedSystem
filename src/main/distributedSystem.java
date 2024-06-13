@@ -41,7 +41,7 @@ public class distributedSystem extends JFrame {
     private JTable detailedTable;
     private static final ScheduledExecutorService scheduler = Executors.newScheduledThreadPool(1);
     private static DefaultTableModel detailedModel;
-    private static int timeout = 0;
+    private static int hacerSwitch = 0;
     private static OperatingSystemMXBean osBean = (OperatingSystemMXBean) ManagementFactory.getOperatingSystemMXBean();
     private static boolean connected = false;
     private static final String IP_REGEX = "^(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\\."
@@ -118,8 +118,13 @@ public class distributedSystem extends JFrame {
             	if (isValidIP(tableModel.getValueAt(0, 0)+"")) {
             		client.println(tableModel.getValueAt(0, 0));
             		if (!tableModel.getValueAt(0, 0).equals(getHamachiIP())) {
-            	        Thread.sleep(1000);
-            			switchToServer();
+            			hacerSwitch++;
+            			if (hacerSwitch == 20) {
+                			switchToServer();
+                			hacerSwitch = 0;
+            			}
+            		} else {
+            			hacerSwitch = 0;
             		}
             	}
             }
@@ -323,7 +328,6 @@ public class distributedSystem extends JFrame {
     private static void reconnectToNextServer() {
         currentServerIndex = (currentServerIndex + 1) % serverIPs.length;
         String nextServerIP = serverIPs[currentServerIndex];
-        timeout++;
         try {
             startClient(nextServerIP, 9999);
         } catch (IOException e) {
@@ -334,7 +338,7 @@ public class distributedSystem extends JFrame {
 
     private static void processServerMessage(String message) {
     	System.out.println(message+":"+getHamachiIP()+""+message.trim().equals(getHamachiIP()));
-    	if (message.trim().equals(getHamachiIP())) {
+    	if (message.trim().equals(getHamachiIP()) && !isServerMode) {
     		switchToServer();
     	}
         if (message.startsWith("SWITCH_TO_NEW_SERVER")) {
