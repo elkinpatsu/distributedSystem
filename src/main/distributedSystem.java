@@ -118,6 +118,7 @@ public class distributedSystem extends JFrame {
             	if (isValidIP(tableModel.getValueAt(0, 0)+"")) {
             		client.println(tableModel.getValueAt(0, 0));
             		if (!tableModel.getValueAt(0, 0).equals(getHamachiIP())) {
+            			client.println(tableModel.getValueAt(0, 0));
             			switchToServer();
             		}
             	}
@@ -461,7 +462,7 @@ public class distributedSystem extends JFrame {
         long freeDiskSpace = disk.getFreeSpace();
         long totalDiskSpace = disk.getTotalSpace();
         double diskFreePercentage = (double) freeDiskSpace / totalDiskSpace * 100;
-        double rankScore = 15;//cpuFree + memoryFreePercentage + diskFreePercentage + 12 * 100) / 100;
+        double rankScore = 16;//cpuFree + memoryFreePercentage + diskFreePercentage + 12 * 100) / 100;
         String bandwidth = null;
         try {
             bandwidth = (bandwidthTest())+"MB/s";
