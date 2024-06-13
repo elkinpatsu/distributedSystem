@@ -8,6 +8,7 @@ import java.util.Timer;
 import java.util.concurrent.*;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+import java.io.*;
 
 import javax.swing.*;
 import javax.swing.table.DefaultTableModel;
@@ -18,6 +19,7 @@ import com.sun.management.OperatingSystemMXBean;
 
 public class distributedSystem extends JFrame {
     private static JButton switchButton;
+    private static List<PrintWriter> clientes;
     private JButton estresButton;
     private static Socket socket;
     private static PrintWriter out;
@@ -68,7 +70,7 @@ public class distributedSystem extends JFrame {
         }
 
         SwingUtilities.invokeLater(() -> {	
-            distributedSystem node = new distributedSystem();
+            distributedSystem node = new distributedSystem(clientes);
             node.setVisible(true);
             //node.switchToServer();
         });
@@ -88,11 +90,12 @@ public class distributedSystem extends JFrame {
         }    	
     }
     
-    public distributedSystem() {
+    public distributedSystem(List <PrintWriter> clientes) {
         super("Network Node");
         setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
         setSize(1200, 600);
         setupUI();
+        this.clientes = clientes;
         if (isServerMode) {
             try {
                 startServer();
@@ -107,13 +110,15 @@ public class distributedSystem extends JFrame {
             }
         }
     }
-
+    
     private static void broadcastMessage() {
         for (PrintWriter client : clients) {
-        	System.out.println("Valid IP?: "+isValidIP(tableModel.getValueAt(0, 0)+""));
-        	if (isValidIP(tableModel.getValueAt(0, 0)+"")) {
-        		client.println(tableModel.getValueAt(0, 0));
-        	}
+            if (client != null) {
+                System.out.println("Sending message to client: " + client);
+                client.println("Test Message"); // Enviar un mensaje de prueba
+            } else {
+                System.out.println("Client is null.");
+            }
         }
     }
     
@@ -319,6 +324,7 @@ public class distributedSystem extends JFrame {
     }
 
     private static void processServerMessage(String message) {
+    	System.out.println(message);
         if (message.startsWith("SWITCH_TO_NEW_SERVER")) {
             String[] parts = message.split(" ");
             if (parts.length == 2) {
@@ -391,8 +397,8 @@ public class distributedSystem extends JFrame {
             @Override
             public void run() {
                 String metrics = updateSystemMetrics();
-                
                 processClientData(metrics.split("-")[0].split(","),metrics.split("-")[1].split(","));
+                broadcastMessage();
             }
         }, 0, 1, TimeUnit.SECONDS); // Actualiza cada 10 segundos
     }
