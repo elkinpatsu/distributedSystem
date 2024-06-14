@@ -41,6 +41,7 @@ public class distributedSystem extends JFrame {
     private JTable detailedTable;
     private static final ScheduledExecutorService scheduler = Executors.newScheduledThreadPool(1);
     private static DefaultTableModel detailedModel;
+    private static int numNucleos = 4;
     private static int hacerSwitch = 0;
     private static int stressLevel = 0;
     private static OperatingSystemMXBean osBean = (OperatingSystemMXBean) ManagementFactory.getOperatingSystemMXBean();
@@ -463,7 +464,7 @@ public class distributedSystem extends JFrame {
         long freeDiskSpace = disk.getFreeSpace();
         long totalDiskSpace = disk.getTotalSpace();
         double diskFreePercentage = (double) freeDiskSpace / totalDiskSpace * 100;
-        double rankScore = ((cpuFree + memoryFreePercentage + diskFreePercentage + 12 * 100) / 100)-stressLevel;
+        double rankScore = ((cpuFree + memoryFreePercentage + diskFreePercentage + numNucleos * 100) / 100)-stressLevel;
         String bandwidth = null;
         try {
             bandwidth = (bandwidthTest())+"MB/s";
