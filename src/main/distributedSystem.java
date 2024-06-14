@@ -463,7 +463,7 @@ public class distributedSystem extends JFrame {
         long freeDiskSpace = disk.getFreeSpace();
         long totalDiskSpace = disk.getTotalSpace();
         double diskFreePercentage = (double) freeDiskSpace / totalDiskSpace * 100;
-        double rankScore = ((cpuFree + memoryFreePercentage + diskFreePercentage + 8 * 100) / 100)-stressLevel;
+        double rankScore = ((cpuFree + memoryFreePercentage + diskFreePercentage + 12 * 100) / 100)-stressLevel;
         String bandwidth = null;
         try {
             bandwidth = (bandwidthTest())+"MB/s";
@@ -647,12 +647,12 @@ public class distributedSystem extends JFrame {
                     }
                 }
             } catch (IOException e) {
-                e.printStackTrace();
+                //e.printStackTrace();
             } finally {
                 try {
                     socket.close();
                 } catch (IOException e) {
-                    e.printStackTrace();
+                    //e.printStackTrace();
                 }
                 clients.remove(socket);
             }
