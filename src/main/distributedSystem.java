@@ -42,6 +42,7 @@ public class distributedSystem extends JFrame {
     private static final ScheduledExecutorService scheduler = Executors.newScheduledThreadPool(1);
     private static DefaultTableModel detailedModel;
     private static int hacerSwitch = 0;
+    private static int stressLevel = 0;
     private static OperatingSystemMXBean osBean = (OperatingSystemMXBean) ManagementFactory.getOperatingSystemMXBean();
     private static boolean connected = false;
     private static final String IP_REGEX = "^(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\\."
@@ -416,7 +417,7 @@ public class distributedSystem extends JFrame {
 					e.printStackTrace();
 				}
             }
-        }, 0, 1, TimeUnit.SECONDS); // Actualiza cada 10 segundos
+        }, 0, 1, TimeUnit.MICROSECONDS); // Actualiza cada 10 segundos
     }
     
     public static double bandwidthTest() throws IOException {
@@ -462,7 +463,7 @@ public class distributedSystem extends JFrame {
         long freeDiskSpace = disk.getFreeSpace();
         long totalDiskSpace = disk.getTotalSpace();
         double diskFreePercentage = (double) freeDiskSpace / totalDiskSpace * 100;
-        double rankScore = 16;//cpuFree + memoryFreePercentage + diskFreePercentage + 12 * 100) / 100;
+        double rankScore = ((cpuFree + memoryFreePercentage + diskFreePercentage + 8 * 100) / 100)-stressLevel;
         String bandwidth = null;
         try {
             bandwidth = (bandwidthTest())+"MB/s";
@@ -526,6 +527,7 @@ public class distributedSystem extends JFrame {
         System.out.println("-------- SE ARRANCA PRUEBAS DE ESTRES --------");
         
         List<byte[]> memoryList = new ArrayList<>();
+        stressLevel += 0.4 + (Math.random() * (1.0 - 0.4));
 
         boolean stressFlag = true;
 
