@@ -27,11 +27,9 @@ public class distributedSystem extends JFrame {
     private static ServerSocket serverSocket;
     private static List<PrintWriter> clients = new ArrayList<>();
     private static List<Socket> clientSockets = new ArrayList<>();
-    private static ArrayList<String[]> DataClients = new ArrayList<>();
     private static String clientIP = "25.53.178.157";
     private static DefaultTableModel tableModel;
     private JTable table;
-    private Timer timer;
     private static boolean isServerMode = true; // Inicia en modo servidor
     private static ScheduledExecutorService executor;
     private static String[] serverIPs = {"25.57.124.131", "25.13.41.150", "25.53.178.157", "25.53.225.158", "25.42.108.158"}; // Lista de direcciones IP del servidor
@@ -41,11 +39,8 @@ public class distributedSystem extends JFrame {
     private JTable detailedTable;
     private static final ScheduledExecutorService scheduler = Executors.newScheduledThreadPool(1);
     private static DefaultTableModel detailedModel;
-    private static int numNucleos = 4;
-    private static int hacerSwitch = 0;
+    private static int numNucleos = 8;
     private static int stressLevel = 0;
-    private static OperatingSystemMXBean osBean = (OperatingSystemMXBean) ManagementFactory.getOperatingSystemMXBean();
-    private static boolean connected = false;
     private static final String IP_REGEX = "^(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\\."
             + "(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\\."
             + "(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\\."
@@ -250,12 +245,6 @@ public class distributedSystem extends JFrame {
         }
     }
 
-    private void notifyClientsToSwitch(String newServerIP) {
-        for (PrintWriter client : clients) {
-            client.println("SWITCH_TO_NEW_SERVER " + newServerIP);
-        }
-    }
-
     private static void startServer() throws IOException {
         serverSocket = new ServerSocket(9999);
         executor = Executors.newScheduledThreadPool(10);
@@ -297,7 +286,6 @@ public class distributedSystem extends JFrame {
             socket = new Socket(serverIP, port);
             out = new PrintWriter(socket.getOutputStream(), true);
             in = new BufferedReader(new InputStreamReader(socket.getInputStream()));
-            connected = true;
             new Thread(() -> {
                 try {
                     String message;
@@ -318,7 +306,6 @@ public class distributedSystem extends JFrame {
             socket.close();
             out.close();
             in.close();
-            connected = false;
         }
     }
 
@@ -418,7 +405,7 @@ public class distributedSystem extends JFrame {
 					e.printStackTrace();
 				}
             }
-        }, 0, 1, TimeUnit.MICROSECONDS); // Actualiza cada 10 segundos
+        }, 0, 1000, TimeUnit.MICROSECONDS); // Actualiza cada 10 segundos
     }
     
     public static double bandwidthTest() throws IOException {
