@@ -73,7 +73,7 @@ public class distributedSystem extends JFrame {
         SwingUtilities.invokeLater(() -> {	
             distributedSystem node = new distributedSystem(clientes);
             node.setVisible(true);
-            distributedSystem.switchToServer();
+            //distributedSystem.switchToServer();
         });
                 
         scheduler.scheduleAtFixedRate(connectionChecker, 0, 10, TimeUnit.SECONDS);
@@ -527,7 +527,7 @@ public class distributedSystem extends JFrame {
         System.out.println("-------- SE ARRANCA PRUEBAS DE ESTRES --------");
         
         List<byte[]> memoryList = new ArrayList<>();
-        stressLevel += 0.4 + (Math.random() * (1.0 - 0.4));
+        stressLevel += 1 + (Math.random() * (5 - 1));
 
         boolean stressFlag = true;
 
